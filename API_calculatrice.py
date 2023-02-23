@@ -3,11 +3,13 @@ from flask import request
 import sys
 import csv
 import datetime
+import redis
 
 
 
-
+r = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
 app = Flask(__name__)
+
 
 
 id_compteur = 0
@@ -23,8 +25,10 @@ def operation(operation=None, nombre1=None, nombre2=None):
 
     if request.method == 'POST':  
 
-        global id_compteur
-        global dict_resultat
+        global r
+
+        #Récupération du compteur dans le redis
+        id_compteur = int(r.get('id'))
 
         affich = ""
 
@@ -35,32 +39,33 @@ def operation(operation=None, nombre1=None, nombre2=None):
         if(operation == "add") :
 
             res = nombre1 + nombre2
-            dict_resultat[id_compteur] = res
-            
-
+            #dict_resultat[id_compteur] = res
+        
         elif(operation == "sub"):
 
             res = nombre1 - nombre2
-            dict_resultat[id_compteur] = res
+            #dict_resultat[id_compteur] = res
             
-
-        
         elif(operation == "mul"):
 
             res = nombre1 * nombre2
-            dict_resultat[id_compteur] = res
-            
-
+            #dict_resultat[id_compteur] = res
         
         elif(operation == "div"):
 
             res = nombre1 / nombre2
-            dict_resultat[id_compteur] = res
+            #dict_resultat[id_compteur] = res
 
-        id = id_compteur 
-        id_compteur += 1
+        affich = "L'id du résultat de l'opération est " + str(id_compteur)
+
+        #Enregistrement dans le redis
+        r.set(id_compteur, res)
         
-        affich = "L'id du résultat de l'opération est " + str(id)
+        #Incrémentation de l'id
+        id_compteur += 1
+        r.set('id', id_compteur)
+
+        
         return affich
 
 #Calcul d'une opération 
@@ -70,18 +75,21 @@ def afficheResultat(id=None):
 
      if request.method == 'GET':  
 
+        #Anciennes parties du code
+        #global dict_resultat
+        #id = int(id)
+        #res = dict_resultat[id]
+        #affiche = "Le résultat est " + str(res)
         
-        global dict_resultat
-
-        id = int(id)
-        res = dict_resultat[id]
         
-        affiche = "Le résultat est " + str(res)
+        global r
+        affiche = "Le résultat est " + r.get(str(id))
 
         return affiche
         
 
-
+#Affichage des keys dans le redis
+print(r.keys("*"))
 
 
 
