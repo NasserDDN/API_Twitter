@@ -9,8 +9,11 @@ import redis
 
 
 tweets_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
-users_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
+users_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=1)
 app = Flask(__name__)
+
+#Supprimer toutes les keys dans le redis
+#tweets_db.flushall()
 
 
 
@@ -26,23 +29,28 @@ def operation(author=None, tweet=None):
         tweet = str(tweet)
 
         #Création du dictionnaire
-        dict = {}
-        dict["author"] = author
-        dict["tweet"] = tweet
-
-        #Dictionnaire en string json
-        dict = json.dumps(dict)
+        dict = {"author":author, "tweet":tweet}
+        
 
         #Récupération du timestamp
         current_time = datetime.datetime.now().timestamp()
 
         #Enregistre le tweet au timestamp actuel
-        tweets_db.set(current_time, dict)
+        tweets_db.hmset(current_time, dict)
 
         #Attribut le tweet à l'utilisateur
-        timestamps = []
-        timestamps.append(current_time)
-        users_db.set(author, timestamps)
+        #Si l'utilisateur a déjà des tweets enregistrés
+        if users_db.exists(author):
+            print("EXISTE")
+            users_db.rpush(author, current_time)
+        
+        #Sinon création d'une liste dans le redis
+        else:
+            print("EXISTE PAS")
+            users_db.rpush(author, current_time)
+        
+        for item in users_db.lrange(author, 0 , -1):
+            print(item)
         
 
         """
@@ -52,14 +60,32 @@ def operation(author=None, tweet=None):
         """
 
         return "Tweet enregistré, timestamp =" + str(current_time)
+       
+        
 
 
-#Attribuer un tweet à une personne
-#appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/username/timestamp
-@app.route("/<author>/<tweet>", methods=['POST']) 
-def operation(author=None, tweet=None):                                                                
+#Afficher tous les tweets
+#appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000
+@app.route("/", methods=['GET']) 
+def afficher_tweets():   
+    if request.method == 'GET': 
 
-    if request.method == 'POST': 
+        affich = ""
+
+        keys = tweets_db.keys()
+        print(keys)
+
+        #affich = users_db.get('nasser')
+
+        """
+        for key in keys :
+        """
+        key = 1677625877.41326
+        value = tweets_db.hgetall(key)
+        affich += value["author"] + "\n" + value["tweet"]
+        
+
+        return affich
 
 
 
