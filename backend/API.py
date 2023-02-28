@@ -1,14 +1,86 @@
 from flask import Flask
 from flask import request
 import sys
+import json #Pour sauvegarder des dictionnaires dans les redis
 import csv
 import datetime
 import redis
 
 
 
-r = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
+tweets_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
+users_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
 app = Flask(__name__)
+
+
+
+
+#Enregistrer un tweet
+#appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/author/tweet
+@app.route("/<author>/<tweet>", methods=['POST']) 
+def operation(author=None, tweet=None):                                                                
+
+    if request.method == 'POST': 
+
+        author = str(author)
+        tweet = str(tweet)
+
+        #Création du dictionnaire
+        dict = {}
+        dict["author"] = author
+        dict["tweet"] = tweet
+
+        #Dictionnaire en string json
+        dict = json.dumps(dict)
+
+        #Récupération du timestamp
+        current_time = datetime.datetime.now().timestamp()
+
+        #Enregistre le tweet au timestamp actuel
+        tweets_db.set(current_time, dict)
+
+        #Attribut le tweet à l'utilisateur
+        timestamps = []
+        timestamps.append(current_time)
+        users_db.set(author, timestamps)
+        
+
+        """
+        #Conversion du float timestamp en vrai date
+        date_time = datetime.datetime.fromtimestamp(current_time)
+        str_date_time = date_time.strftime("%d %B %Y à %H:%M:%S")
+        """
+
+        return "Tweet enregistré, timestamp =" + str(current_time)
+
+
+#Attribuer un tweet à une personne
+#appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/username/timestamp
+@app.route("/<author>/<tweet>", methods=['POST']) 
+def operation(author=None, tweet=None):                                                                
+
+    if request.method == 'POST': 
+
+
+
+
+
+
+
+
+
+#Construction de l'app
+if __name__ == '__main__':
+    if(len(sys.argv)>1):
+        if sys.argv[1] == "check_syntax":
+            print("Build [ OK ]")
+            exit(0)
+        else:
+            print("YA UN PROBLEME")
+            exit(1)
+    app.run(debug=True)
+
+"""
 
 
 
@@ -20,17 +92,21 @@ dict_resultat = {}
 
 #Calcul d'une opération 
 #appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/nom/solde
-@app.route("/<operation>/<nombre1>/<nombre2>", methods=['POST']) 
+@app.route("/<nombre1>/<operation>/<nombre2>", methods=['POST']) 
 def operation(operation=None, nombre1=None, nombre2=None):                                                                
 
     if request.method == 'POST':  
 
         global r
 
+        global id_compteur
+
         #Récupération du compteur dans le redis
         id_compteur = int(r.get('id'))
 
         affich = ""
+
+        res = 0
 
         operation = str(operation)
         nombre1 = int(nombre1)
@@ -55,8 +131,10 @@ def operation(operation=None, nombre1=None, nombre2=None):
 
             res = nombre1 / nombre2
             #dict_resultat[id_compteur] = res
+        
+        
 
-        affich = "L'id du résultat de l'opération est " + str(id_compteur)
+        affich = "L'id de l'opération est " + str(id_compteur)
 
         #Enregistrement dans le redis
         r.set(id_compteur, res)
@@ -83,6 +161,7 @@ def afficheResultat(id=None):
         
         
         global r
+        res = str(r.get(str(id)))
         affiche = "Le résultat est " + r.get(str(id))
 
         return affiche
@@ -104,6 +183,9 @@ if __name__ == '__main__':
             print("YA UN PROBLEME")
             exit(1)
     app.run(debug=True)
+
+
+"""
 
 """
 dict_personne= {}
