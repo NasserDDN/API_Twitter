@@ -10,10 +10,10 @@ import redis
 
 tweets_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
 users_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=1)
+hashtag_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=2)
 app = Flask(__name__)
 
-#Supprimer toutes les keys dans le redis
-#tweets_db.flushall()
+
 
 
 
@@ -29,9 +29,74 @@ def operation(author=None, tweet=None):
         tweet = str(tweet)
 
         #Création du dictionnaire
-        dict = {"author":author, "tweet":tweet}
+        dict = {}
+        dict["author"] = author
+        dict["tweet"] = tweet
         
+        #Vérifier qi il y a un hashtag
+        text = tweet.split()
 
+        hashtag = []
+
+        is_an_hashtag = False
+
+        if(len(text) > 1) :
+            for word in text :
+                if word[0] == "#":
+                    print("Il y a un HASHTAG 1")
+                    
+                    #Ajout du hashtag à la liste
+                    hashtag.append(word)
+
+                    is_an_hashtag = True
+
+                
+
+        elif (len(text) == 1):
+            for word in text :
+                if word[0] == "#":
+                    print("Il y a un HASHTAG 2")
+                    
+                    #Ajout du hashtag à la liste
+                    hashtag.append(word)
+
+                    is_an_hashtag = True
+
+        
+        
+        #Ajout du hashtag à la base
+        keys = hashtag_db.keys()
+        
+        exist = False
+
+    
+        for hash in hashtag:
+
+            for key in keys:
+
+                value = hashtag_db[key]
+
+                #On vérifie si le hashtag est déjà dans la base
+                if (hash == value):
+
+                    exist = True
+            
+            #Si le hashtag n'existe pas dans la base on l'ajoute
+            if not exist:
+
+                hashtag_db[len(hashtag_db.keys())] = hash
+            
+            exist = False
+
+        #Si pas d'hashtag dans le texte
+        if not is_an_hashtag:
+            
+            hashtag.append("NoHashtags")
+
+
+        hashtag = json.dumps(hashtag)
+        dict["hashtags"] = hashtag
+        
         #Récupération du timestamp
         current_time = datetime.datetime.now().timestamp()
 
@@ -39,19 +104,12 @@ def operation(author=None, tweet=None):
         tweets_db.hmset(current_time, dict)
 
         #Attribut le tweet à l'utilisateur
-        #Si l'utilisateur a déjà des tweets enregistrés
-        if users_db.exists(author):
-            print("EXISTE")
-            users_db.rpush(author, current_time)
+        users_db.rpush(author, current_time)
         
-        #Sinon création d'une liste dans le redis
-        else:
-            print("EXISTE PAS")
-            users_db.rpush(author, current_time)
-        
+        """
         for item in users_db.lrange(author, 0 , -1):
             print(item)
-        
+        """
 
         """
         #Conversion du float timestamp en vrai date
@@ -59,11 +117,20 @@ def operation(author=None, tweet=None):
         str_date_time = date_time.strftime("%d %B %Y à %H:%M:%S")
         """
 
-        return "Tweet enregistré, timestamp =" + str(current_time)
-       
+        """
+        #Supprimer toutes les keys dans le redis
+        tweets_db.flushall()
+        users_db
+        hashtag_db
+        """
+        
         
 
-
+        #return "Tweet enregistré, timestamp =" + str(current_time)
+        return dict
+        
+       
+        
 #Afficher tous les tweets
 #appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000
 @app.route("/", methods=['GET']) 
@@ -72,22 +139,107 @@ def afficher_tweets():
 
         affich = ""
 
+        #Récupération des keys dans la base de tweets
         keys = tweets_db.keys()
-        print(keys)
-
-        #affich = users_db.get('nasser')
-
-        """
-        for key in keys :
-        """
-        key = 1677625877.41326
-        value = tweets_db.hgetall(key)
-        affich += value["author"] + "\n" + value["tweet"]
         
+        #Parcours des keys
+        for key in keys :
+
+            #Récupération du dictionnaire
+            value = tweets_db.hgetall(key)
+
+            #Récupération des hashtags si il y en a
+            hashtags = json.loads(value["hashtags"])
+            sujet = ""
+            if hashtags[0] == "NoHashtags" :
+                sujet = "No hashtags"
+            else :
+                for item in hashtags:
+                    sujet += item + "  "
+
+
+            #Affichage
+            affich += str(value["author"]) + "\n" + str(value["tweet"]) + "\n" + "hashtags : " +  sujet + "\n\n"
+
+        
+
+        #Récupération des keys dans la base de hashtag
+        keys = hashtag_db.keys()
+        affich2 = ""
+
+        #Parcours des keys
+        for key in keys :
+
+            #Récupération du dictionnaire
+            value = hashtag_db.get(key)
+
+            affich2 += str(value) + "\n"
+
+            
+            
+        
+
+        return "Liste des tweets" + "\n\n" + affich + "\n" + "Liste des sujets" + "\n\n" + affich2 + "\n"
+
+
+#Afficher tous les tweets liés à une personne ou à un sujet
+#appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000/u-username or h-hashtag (with the #)
+@app.route("/<username>", methods=['GET']) 
+def afficher_tweets_personne(username = None):   
+    if request.method == 'GET': 
+        
+        username = str(username)
+
+        affich = ""
+
+        if (username[0] == "u" and username[1] == "-"):
+
+            username = username[2:]
+            for item in users_db.lrange(username, 0 , -1):
+            
+                value = tweets_db.hgetall(item)
+
+                affich += str(value["author"]) + "\n" + str(value["tweet"]) + "\n"
+
+            
+            for item in users_db.lrange(username, 0 , -1):
+                    print(item)
+        
+
+        if (username[0] == "h" and username[1] == "-"):
+            username = username[2:]
+
+            keys = tweets_db.keys()
+
+            for key in keys :
+
+                value = tweets_db.hgetall(key)
+                hashtags = json.loads(value["hashtags"])
+
+                for hashtag in hashtags:
+
+                    if (username == hashtag):
+
+                        affich += str(value["author"]) + "\n" + str(value["tweet"]) + "\n"
+
 
         return affich
 
 
+#Retweeter
+#appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/timestamp/user_who_rt
+@app.route("/<timestamp>/<user_who_rt>", methods=['PUT']) 
+def retweet(timestamp=None, user_who_rt = None):                                                                
+
+    if request.method == 'PUT': 
+
+        timestamp = float(timestamp)
+        user_who_rt = str(user_who_rt)
+
+        #Ajout de la clé du tweet dans la liste des tweets de l'utilisateur qui a retweeté
+        users_db.rpush(user_who_rt, timestamp)
+
+        return "RETWEET"
 
 
 
