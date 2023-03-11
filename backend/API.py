@@ -23,7 +23,7 @@ app = Flask(__name__)
 @app.route("/<object>", methods=['POST']) 
 def operation(object=None):                                                                
 
-    if request.method == 'POST': 
+    if request.method == 'POST':
 
         object = json.loads(object)
 
@@ -251,6 +251,10 @@ def retweet(timestamp=None, user_who_rt = None):
 
 #Construction de l'app
 if __name__ == '__main__':
+
+    app.run(host='0.0.0.0')
+
+    """
     if(len(sys.argv)>1):
         if sys.argv[1] == "check_syntax":
             print("Build [ OK ]")
@@ -259,6 +263,7 @@ if __name__ == '__main__':
             print("YA UN PROBLEME")
             exit(1)
     app.run(debug=True)
+    """
 
 """
 
