@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask import request
 import sys
 import json #Pour sauvegarder des dictionnaires dans les redis
@@ -132,7 +132,7 @@ def operation(object=None):
         
 
         #return "Tweet enregistré, timestamp =" + str(current_time)
-        return json.dumps("CA Marche")
+        return jsonify(dict)
         
        
         
