@@ -20,20 +20,22 @@ app = Flask(__name__)
 
 #Enregistrer un tweet
 #appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/author/tweet
-@app.route("/<author>/<tweet>", methods=['POST']) 
-def operation(author=None, tweet=None):                                                                
+@app.route("/<object>", methods=['POST']) 
+def operation(object=None):                                                                
 
     if request.method == 'POST': 
 
-        author = str(author)
-        tweet = str(tweet)
+        object = json.loads(object)
+
+        author = str(object["author"])
+        tweet = str(object["tweet"])
 
         #Création du dictionnaire
         dict = {}
         dict["author"] = author
         dict["tweet"] = tweet
         
-        #Vérifier qi il y a un hashtag
+        #Vérifier si il y a un hashtag
         text = tweet.split()
 
         hashtag = []
