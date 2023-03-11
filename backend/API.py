@@ -258,7 +258,7 @@ if __name__ == '__main__':
         else:
             print("YA UN PROBLEME")
             exit(1)
-    app.run(port=8000,debug=True)
+    app.run(debug=True)
     
 
 """
