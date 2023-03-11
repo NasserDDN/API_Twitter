@@ -251,10 +251,6 @@ def retweet(timestamp=None, user_who_rt = None):
 
 #Construction de l'app
 if __name__ == '__main__':
-
-    app.run(host='0.0.0.0')
-
-    """
     if(len(sys.argv)>1):
         if sys.argv[1] == "check_syntax":
             print("Build [ OK ]")
@@ -262,8 +258,8 @@ if __name__ == '__main__':
         else:
             print("YA UN PROBLEME")
             exit(1)
-    app.run(debug=True)
-    """
+    app.run(port=8000,debug=True)
+    
 
 """
 
