@@ -183,7 +183,7 @@ def afficher_tweets():
             
         
 
-        return "Liste des tweets" + "\n\n" + affich + "\n" + "Liste des sujets" + "\n\n" + affich2 + "\n"
+        return jsonify("Liste des tweets" + "\n\n" + affich + "\n" + "Liste des sujets" + "\n\n" + affich2 + "\n")
 
 
 #Afficher tous les tweets liés à une personne ou à un sujet
