@@ -5,13 +5,14 @@ import json #Pour sauvegarder des dictionnaires dans les redis
 import csv
 import datetime
 import redis
-
+from flask_cors import CORS
 
 
 tweets_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
 users_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=1)
 hashtag_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=2)
 app = Flask(__name__)
+CORS(app)
 
 
 
