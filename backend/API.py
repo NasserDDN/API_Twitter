@@ -132,7 +132,7 @@ def operation(object=None):
         
 
         #return "Tweet enregistré, timestamp =" + str(current_time)
-        return dict
+        return str(dict)
         
        
         
