@@ -13,7 +13,7 @@ users_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_resp
 hashtag_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=2)
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r'/*': {'origins': '*'}})
 
 
 
@@ -23,7 +23,6 @@ CORS(app)
 #Enregistrer un tweet
 #appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/author/tweet
 @app.route("/<object>", methods=['POST']) 
-@cross_origin()
 def operation(object=None):                                                                
 
     if request.method == 'POST':
@@ -139,7 +138,6 @@ def operation(object=None):
 #Afficher tous les tweets
 #appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000
 @app.route("/", methods=['GET']) 
-@cross_origin()
 def afficher_tweets():   
     if request.method == 'GET': 
 
@@ -191,7 +189,6 @@ def afficher_tweets():
 #Afficher tous les tweets liés à une personne ou à un sujet
 #appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000/u-username or h-hashtag (with the #)
 @app.route("/<username>", methods=['GET']) 
-@cross_origin()
 def afficher_tweets_personne(username = None):   
     if request.method == 'GET': 
         
@@ -236,7 +233,6 @@ def afficher_tweets_personne(username = None):
 #Retweeter
 #appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/timestamp/user_who_rt
 @app.route("/<timestamp>/<user_who_rt>", methods=['PUT']) 
-@cross_origin()
 def retweet(timestamp=None, user_who_rt = None):                                                                
 
     if request.method == 'PUT': 
