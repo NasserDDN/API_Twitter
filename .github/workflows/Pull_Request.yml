@@ -27,4 +27,6 @@ jobs:
         run: |
           pip3 install flask
           pip3 install redis
+          pip3 install flask-cors
+          pip3 install bcrypt
           python backend/API.py check_syntax
