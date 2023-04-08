@@ -2,52 +2,63 @@ from flask import Flask, jsonify
 from flask import request
 import sys
 import json #Pour sauvegarder des dictionnaires dans les redis
-import csv
-import datetime
+import datetime #Pour les timestamp
 import redis
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
+import bcrypt #Pour encrypter les mots de passes
 
-
+#Base pour stocker les tweets
 tweets_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
+
+#Base contenant les tweets de chaque utilisateur (retweets inclus)
 users_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=1)
+
+#Base contenant la liste des sujets
 hashtag_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=2)
+
+#Base contenant la liste des comptes et leur mot de passe encrypté
+account_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=3)
+
+#Base pour stocker l'utilisateur actuel
+actual_user_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=4)
 
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
-
-
-
-
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 #Enregistrer un tweet
-#appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/author/tweet
-@app.route("/<object>", methods=['POST']) 
-def operation(object=None):                                                                
-
+@app.route('/postTweet', methods=['POST']) 
+def tweeter(): 
+                                                                
     if request.method == 'POST':
 
-        object = json.loads(object)
-
-        author = str(object["author"])
-        tweet = str(object["tweet"])
+        #Récupération des paramètres de la requête
+        record = json.loads(request.data)
+        author = str(record['author'])
+        tweet = str(record['tweet'])
 
         #Création du dictionnaire
         dict = {}
         dict["author"] = author
         dict["tweet"] = tweet
         
+        ##############################
         #Vérifier si il y a un hashtag
+        ##############################
         text = tweet.split()
 
+        #Liste qui contiendra 0, 1 ou plusieurs sujets
         hashtag = []
 
         is_an_hashtag = False
 
+        #Parcours des mots du texte
         if(len(text) > 1) :
             for word in text :
+
+                #Si un hashtag est détecté
                 if word[0] == "#":
-                    print("Il y a un HASHTAG 1")
                     
                     #Ajout du hashtag à la liste
                     hashtag.append(word)
@@ -68,36 +79,41 @@ def operation(object=None):
 
         
         
-        #Ajout du hashtag à la base
+        #Clés pour parcourir la base
         keys = hashtag_db.keys()
         
-        exist = False
+        #Si le tweet contient un sujet
+        if is_an_hashtag:
 
-    
-        for hash in hashtag:
-
-            for key in keys:
-
-                value = hashtag_db[key]
-
-                #On vérifie si le hashtag est déjà dans la base
-                if (hash == value):
-
-                    exist = True
-            
-            #Si le hashtag n'existe pas dans la base on l'ajoute
-            if not exist:
-
-                hashtag_db[len(hashtag_db.keys())] = hash
-            
             exist = False
 
+            #Parcours des sujets du tweet
+            for hash in hashtag:
+
+                #Parcours de la base
+                for key in keys:
+
+                    value = hashtag_db[key]
+
+                    #On vérifie si le hashtag est déjà dans la base
+                    if (hash == value):
+
+                        exist = True
+                
+                #Si le hashtag n'existe pas dans la base on l'ajoute
+                if not exist:
+
+                    hashtag_db[len(hashtag_db.keys())] = hash
+                
+                exist = False
+
         #Si pas d'hashtag dans le texte
-        if not is_an_hashtag:
+        else:
             
             hashtag.append("NoHashtags")
 
 
+        #Ajout de la liste d'hashtags au dictionnaire
         hashtag = json.dumps(hashtag)
         dict["hashtags"] = hashtag
         
@@ -110,66 +126,79 @@ def operation(object=None):
         #Attribut le tweet à l'utilisateur
         users_db.rpush(author, current_time)
         
-        """
-        for item in users_db.lrange(author, 0 , -1):
-            print(item)
-        """
-
-        """
-        #Conversion du float timestamp en vrai date
-        date_time = datetime.datetime.fromtimestamp(current_time)
-        str_date_time = date_time.strftime("%d %B %Y à %H:%M:%S")
-        """
-
-        """
-        #Supprimer toutes les keys dans le redis
-        tweets_db.flushall()
-        users_db
-        hashtag_db
-        """
+        return jsonify(record)
         
-        
-
-        #return "Tweet enregistré, timestamp =" + str(current_time)
-        return jsonify(dict)
         
        
         
-#Afficher tous les tweets
-#appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000
+#Récupérer les tweets et les sujets
 @app.route("/", methods=['GET']) 
 def afficher_tweets():   
     if request.method == 'GET': 
 
-        affich = ""
+    
+        #Déclaration des listes
+        list_tweets = []
+        list_sujets = []
 
         #Récupération des keys dans la base de tweets
         keys = tweets_db.keys()
-        
-        #Parcours des keys
+
+        #Trier les clés pour afficher les tweets du plus au moins récent
+        keys.sort(reverse=True)      #(reverse = True pour ordre décroissant)
+            
+        #Parcours des tweets
         for key in keys :
 
             #Récupération du dictionnaire
             value = tweets_db.hgetall(key)
 
-            #Récupération des hashtags si il y en a
-            hashtags = json.loads(value["hashtags"])
-            sujet = ""
-            if hashtags[0] == "NoHashtags" :
-                sujet = "No hashtags"
+            #Id unique pour chaque tweet
+            value["id"] = key
+
+            #Récupération du timestamp
+            current_time = datetime.datetime.now().timestamp()
+
+            #Différence pour savoir depuis combien de temps le tweet est publié
+            difference  = current_time - float(key)
+
+            #Si le tweet a été publié il y a moins d'une heure
+            if(difference < 3600):
+                
+                #Conversion en minutes
+                nb_minutes = int(difference / 60)
+
+                value["time"] = str(nb_minutes) + 'min'
+
+                #Ajout à la liste des tweets
+                list_tweets.append(value)
+
+
+            #Si le tweet a été publié il y a plus de 24h
+            elif(difference > 86400):
+                
+                #Conversion au format Jour - Mois - Année
+                date_time = datetime.datetime.fromtimestamp(float(key))
+                str_date_time = date_time.strftime("%d %B %Y")
+
+                value["time"] = str_date_time
+
+                #Ajout à la liste des tweets
+                list_tweets.append(value)
+
+            #Si le tweet a été publié il y a moins de 24h
             else :
-                for item in hashtags:
-                    sujet += item + "  "
 
+                #Conversion pour avoir le nombre d'heures
+                nb_hours = int(difference / 3600)
 
-            #Affichage
-            affich += str(value["author"]) + "\n" + str(value["tweet"]) + "\n" + "hashtags : " +  sujet + "\n\n"
+                value["time"] = str(nb_hours) + 'h'
 
-        
-
+                #Ajout à la liste des tweets
+                list_tweets.append(value)
+    
         #Récupération des keys dans la base de hashtag
         keys = hashtag_db.keys()
-        affich2 = ""
 
         #Parcours des keys
         for key in keys :
@@ -177,522 +206,289 @@ def afficher_tweets():
             #Récupération du dictionnaire
             value = hashtag_db.get(key)
 
-            affich2 += str(value) + "\n"
+            list_sujets.append(value)
 
+        dict = {}
+        dict["tweets"] = list_tweets
+        dict["sujets"] = list_sujets
+
+        return jsonify("ALLez")
+        return jsonify(dict)
+    
+def convertTimestamp(item, difference):
+    #Si le tweet a été publié il y a moins d'une heure
+                if(difference < 3600):
+
+                    print("Entrée dans la fonction")
             
-            
-        
+                    nb_minutes = int(difference / 60)
 
-        return jsonify("Liste des tweets" + "\n\n" + affich + "\n" + "Liste des sujets" + "\n\n" + affich2 + "\n")
+                    return str(nb_minutes) + 'min'
 
+                #Si le tweet a été publié il y a plus de 24h la date sera affichée
+                elif(difference > 86400):
+                
+                    date_time = datetime.datetime.fromtimestamp(float(item))
+                    str_date_time = date_time.strftime("%d %B %Y")
+
+                    return str_date_time
+
+                #Si le tweet a été publié il y a moins de 24h le nombre d'heures est affiché
+                else :
+                    nb_hours = int(difference / 3600)
+
+                    return str(nb_hours) + 'h'
+ 
 
 #Afficher tous les tweets liés à une personne ou à un sujet
 #appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000/u-username or h-hashtag (with the #)
-@app.route("/<username>", methods=['GET']) 
-def afficher_tweets_personne(username = None):   
-    if request.method == 'GET': 
-        
-        username = str(username)
+@app.route("/", methods=['PUT']) 
+def afficher_tweets_personne(object=None):   
 
-        affich = ""
+    if request.method == 'PUT': 
 
+        #Récupération des paramètres
+        record = json.loads(request.data)
+        username = str(record['data'])
+
+        #Déclaration de la lkste
+        list_tweets = []
+
+        #Si le paramètre est un nom d'utilisateur
         if (username[0] == "u" and username[1] == "-"):
 
+            #Suppression des 2 premiers caractères
             username = username[2:]
+
+            #Parcours de tous les tweets de l'utilisateur
             for item in users_db.lrange(username, 0 , -1):
             
                 value = tweets_db.hgetall(item)
 
-                affich += str(value["author"]) + "\n" + str(value["tweet"]) + "\n"
+                #Récupération du timestamp
+                current_time = datetime.datetime.now().timestamp()
 
-            
-            for item in users_db.lrange(username, 0 , -1):
-                    print(item)
-        
+                #Différence pour savoir depuis combien de temps le tweet est publié
+                difference  = current_time - float(item)
 
-        if (username[0] == "h" and username[1] == "-"):
-            username = username[2:]
+                #Conversion de la différence de temps au bon format
+                value["time"] = convertTimestamp(item, difference)
+
+                #Ajout du tweet à la liste
+                list_tweets.append(value)
+
+            return jsonify(list_tweets)
+
+
+        #Si le paramètre est un hashtag
+        elif (username[0] == "h" and username[1] == "-"):
+
+            #Suppression des 2 premiers caractères
+            sujet = username[2:]
 
             keys = tweets_db.keys()
 
+            #Parcours des tweets
             for key in keys :
 
+                #Récupération des hashtags si il y en a
                 value = tweets_db.hgetall(key)
                 hashtags = json.loads(value["hashtags"])
 
+                #Parcours des hashtags
                 for hashtag in hashtags:
 
-                    if (username == hashtag):
+                    #Si le tweet est lié au hashtag on l'ajoute dans la liste
+                    if (sujet == hashtag):
 
-                        affich += str(value["author"]) + "\n" + str(value["tweet"]) + "\n"
+                        #Récupération du timestamp
+                        current_time = datetime.datetime.now().timestamp()
+
+                        #Différence pour savoir depuis combien de temps le tweet est publié
+                        difference  = current_time - float(key)
+
+                        #Conversion de la différence de temps au bon format
+                        value["time"] = convertTimestamp(key, difference)
+
+                        #Ajout du tweet à la liste
+                        list_tweets.append(value)
+
+            return jsonify(list_tweets)
+
+        else :
+            return jsonify("ERROR")
 
 
-        return affich
+        
 
 
 #Retweeter
-#appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/timestamp/user_who_rt
-@app.route("/<timestamp>/<user_who_rt>", methods=['PUT']) 
-def retweet(timestamp=None, user_who_rt = None):                                                                
+@app.route("/inscription", methods=['PUT']) 
+def retweet():                                                                
 
     if request.method == 'PUT': 
 
-        timestamp = float(timestamp)
-        user_who_rt = str(user_who_rt)
+        #Récupération des paramètres
+        record = json.loads(request.data)
 
-        #Ajout de la clé du tweet dans la liste des tweets de l'utilisateur qui a retweeté
-        users_db.rpush(user_who_rt, timestamp)
+        ########
+        #Retweet
+        ########
+        if(record["requestType"] == "retweet"):
+                
+            timestamp = float(record["id"])
+            user_who_rt = str(record["user"])
+            author_of_tweet = str(record["author_of_tweet"])
 
-        return "RETWEET"
+            #-------------------------------------------#
+            #Si l'utilisateur a déjà tweeté ou retweeter#
+            #-------------------------------------------#
+            if(users_db.exists(user_who_rt) == 1):
 
+                #Compteur
+                count = 0
+                    
+                #Si l'utilisateur veut retweet son propre tweet
+                if(user_who_rt == author_of_tweet):
+                        
+                    #Parcours de tous les tweets de l'utilisateur
+                    for item in users_db.lrange(user_who_rt, 0 , -1):
 
+                        #Compte du nombre de fois que son tweet apparait sur son profil
+                        if(timestamp == float(item)):
+                            count = count +1
+                        
+                    #Si apparition du tweet plus de 2 fois
+                    # => L'auteur du tweet a déjà retweeté son propre tweet
+                    # => Il veut donc annuler ce retweet
+                    if(count > 1):
 
+                        #Annuler le retweet
+                        users_db.lrem(user_who_rt, -1, timestamp)
+                        return jsonify("1")
+                        
+                    #Si il n'a jamais retweeté ce tweet
+                    users_db.rpush(user_who_rt, timestamp)
+                    return jsonify("0")
+                
+                #Si l'utilisateur veut retweet le tweet d'un autre
+                else:
 
+                    #Parcours de tous les tweets de l'utilisateur
+                    for item in users_db.lrange(user_who_rt, 0 , -1):
 
+                        #Si il a déjà retweeté ce tweet
+                        if(timestamp == float(item)):
 
+                            #Annulation du retweet
+                            users_db.lrem(user_who_rt, -1, timestamp)
+                            count = count + 1
 
-#Construction de l'app
-if __name__ == '__main__':
-    if(len(sys.argv)>1):
-        if sys.argv[1] == "check_syntax":
-            print("Build [ OK ]")
-            exit(0)
-        else:
-            print("YA UN PROBLEME")
-            exit(1)
-    app.run(debug=True)
-    
+                            return jsonify("1")
 
-"""
+                    #Si il n'a jamais retweeté ce tweet
+                    users_db.rpush(user_who_rt, timestamp)
+                    return jsonify("0")
 
-
-
-id_compteur = 0
-dict_resultat = {}
-
-
-
-
-#Calcul d'une opération 
-#appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/nom/solde
-@app.route("/<nombre1>/<operation>/<nombre2>", methods=['POST']) 
-def operation(operation=None, nombre1=None, nombre2=None):                                                                
-
-    if request.method == 'POST':  
-
-        global r
-
-        global id_compteur
-
-        #Récupération du compteur dans le redis
-        id_compteur = int(r.get('id'))
-
-        affich = ""
-
-        res = 0
-
-        operation = str(operation)
-        nombre1 = int(nombre1)
-        nombre2 = int(nombre2)
-
-        if(operation == "add") :
-
-            res = nombre1 + nombre2
-            #dict_resultat[id_compteur] = res
-        
-        elif(operation == "sub"):
-
-            res = nombre1 - nombre2
-            #dict_resultat[id_compteur] = res
+            #------------------------------------------#
+            #------------------SINON-------------------#
+            #------------------------------------------#
+            else:
+                #Ajout de la clé du tweet dans la liste des tweets de l'utilisateur qui a retweet
+                users_db.rpush(user_who_rt, timestamp)
+                return jsonify("0")
             
-        elif(operation == "mul"):
+            
+        ########################
+        #Si demande de connexion
+        ########################
+        elif(record["requestType"] == "signin"):
 
-            res = nombre1 * nombre2
-            #dict_resultat[id_compteur] = res
+            #Liste des clés de la base
+            users = account_db.keys()
+
+            #Récupération du pseudo
+            user = str(record["username"])
+
+            #Récupération du mot de passe
+            password = str(record["password"])
+
+            #Si l'utilisateur continue en tant qu'invité
+            if(user == "invité" and password == "invité"):
+                    
+                #Actualisation de l'utilisateur en cours
+                actual_user_db.set("actual", str(user))
+
+                return jsonify("Impeccable")
+                    
+            #Parcours des comptes enregistrés
+            for key in users:
+
+                #Si le compte existe
+                if (str(key) == user):
+
+                    #Si mot de passe correct
+                    if bcrypt.checkpw(password.encode('utf-8'), account_db.get(key).encode('utf-8')):
+
+                        #Actualisation de l'utilisateur en cours
+                        actual_user_db.set("actual", str(user))
+
+                        return jsonify("Impeccable")
+                    
+                    #Si mot de passe incorrect
+                    else: 
+                        return jsonify("ERROR CODE 1")
+
+            #Si le pseudo n'existe pas dans la base
+            return jsonify("ERROR CODE 2")
+
+        ############
+        #Inscription
+        ############    
+        elif(record["requestType"] == "signup") :
+
+            #Liste des clés de la base
+            users = account_db.keys()
         
-        elif(operation == "div"):
+            #Récupération du pseudo
+            user = str(record["username"])
 
-            res = nombre1 / nombre2
-            #dict_resultat[id_compteur] = res
-        
-        
+            #Si le pseudo existe deja
+            if user in users:
+                 return jsonify("ERROR CODE 1")
+            
+            #Récupération et encryptage du mot de passe
+            password = str(record["password"])
 
-        affich = "L'id de l'opération est " + str(id_compteur)
+            encrypt_pwd = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
-        #Enregistrement dans le redis
-        r.set(id_compteur, res)
-        
-        #Incrémentation de l'id
-        id_compteur += 1
-        r.set('id', id_compteur)
+            #Ajout à la base redis
+            account_db.set(user, encrypt_pwd)
 
-        
-        return affich
-
-#Calcul d'une opération 
-#appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000/nom/solde
-@app.route("/<id>", methods=['GET']) 
-def afficheResultat(id=None):  
-
-     if request.method == 'GET':  
-
-        #Anciennes parties du code
-        #global dict_resultat
-        #id = int(id)
-        #res = dict_resultat[id]
-        #affiche = "Le résultat est " + str(res)
-        
-        
-        global r
-        res = str(r.get(str(id)))
-        affiche = "Le résultat est " + r.get(str(id))
-
-        return affiche
-        
-
-#Affichage des keys dans le redis
-print(r.keys("*"))
-
-
-
-
-#Construction de l'app
-if __name__ == '__main__':
-    if(len(sys.argv)>1):
-        if sys.argv[1] == "check_syntax":
-            print("Build [ OK ]")
-            exit(0)
-        else:
-            print("YA UN PROBLEME")
-            exit(1)
-    app.run(debug=True)
-
-
-"""
-
-"""
-dict_personne= {}
-dict_transac={}
-
-
-
-##################################################################################################################################################
-#Création des classes
-##################################################################################################################################################
-class Personne:
-    def __init__(self, nom, solde):
-        self.nom = nom
-        self.solde = int(solde)
-    
-    def printPersonne(self):
-        return (self.nom + " a un solde de : "+str(self.solde) + " € " + "\n")
-
-    def getSolde(self) -> str:
-        return str(self.solde)
-
-    def setSoldePlus(self,montant):
-        self.solde = self.solde + montant
-    
-    def setSoldeMoins(self,montant):
-        self.solde = self.solde - montant
-    
-    def getNom(self) -> str:
-        return str(self.nom)
-
-
-class Transaction:
-    def __init__(self, P1, P2,temps,montant):
-        self.P1 = P1
-        self.P2 = P2
-        self.montant = montant
-        self.temps = temps
-
-    def getP1(self):
-        return self.P1
- 
-    def getP2(self):
-        return self.P2
-
-    def printTransac(self):
-        #Conversion du float timestamp en vrai date
-        date_time = datetime.datetime.fromtimestamp(self.temps)
-        str_date_time = date_time.strftime("%d %B %Y à %H:%M:%S")
-        return (self.P1 + " a donné " + str(self.montant) + " € à "+ self.P2 + " le " + str_date_time + " \n")
-    
-    def getTemps(self):
-        return self.temps
-
-
-##################################################################################################################################################
-#Récupération des données des fichiers csv
-##################################################################################################################################################
-
-
-
-#Lecture des fichiers csv (r pour avoir un raw string)
-transaction_file = open(r"transactions.csv")
-personnes_file = open(r"personnes.csv")
-
-reader_transactions = csv.reader(transaction_file)
-reader_personnes = csv.reader(personnes_file)
-
-
-
-
-#Parcours du fichier csv contenant des personnes et leur solde
-for row in reader_personnes:
-
-    #Séparer les chaînes de caractères pour avoir accès aux différentes cases du csv
-    newRow = row[0].split(';')
-
-    #Création objet Personne
-    p = Personne(str(newRow[0]), int(newRow[1]))
-
-    #Ajout de la personne au dictionnaire
-    dict_personne[len(dict_personne)] = p
-
-
-#Parcours du fichier csv contenant des transactions
-for row in reader_transactions:
-
-    #Séparer les chaînes de caractères pour avoir accès aux différentes cases du csv
-    newRow = row[0].split(';')
-
-    #Création objet Transaction
-    t = Transaction(str(newRow[0]), str(newRow[1]), int(newRow[2]), int(newRow[3]))
-
-    #Ajout de la transaction au dictionnaire
-    dict_transac[len(dict_transac)] = t
-
-
-##################################################################################################################################################
-#Fonctions utiles
-##################################################################################################################################################
-
-
-#Fonction qui tri chronologiquement le dictionnaire de transactions passé en paramètre
-def triTransactions(transacs : dict):
-    affich = ""
-    for key in sorted(transacs, key=lambda item: transacs[item].temps):
-            affich += transacs[key].printTransac()
-    return affich
-
-#Convertit un string en raw string(pour les paths des fichiers csv)
-def to_raw(string : str):
-    return fr"{string}"
-
-##################################################################################################################################################
-#Création des fonction de notre app Flask
-##################################################################################################################################################
-
-
-#Création d'une personne : 
-#appel dans un autre terminal avec : curl -X PUT http://127.0.0.1:5000/nom/solde
-@app.route("/<nom>/<solde>", methods=['PUT']) 
-def add_personne(nom=None, solde=None):                                                                
-
-    if request.method == 'PUT':                                                 
-        nom =str(nom)                                 
-        solde = int(solde)
-        p1 = Personne(nom,solde)
-        dict_personne[len(dict_personne)]=p1
-
-        affiche= p1.printPersonne()
-        return affiche
-
-
-
-#Importation d'un csv contenant des transactions : 
-#appel dans un autre terminal avec : curl -X PUT http://127.0.0.1:5000/filePath
-@app.route("/<filePath>", methods=['PUT']) 
-def add_transaction_file(filePath=None):                                                                
-
-    if request.method == 'PUT':    
-        affiche = ""                                             
-        filePath = str(filePath)
-        filePath = to_raw(filePath)
-
-        #Lecture du fichier csv
-        transactionFile = open(filePath)
-        readerTransaction = csv.reader(transactionFile)
-
-        #Parcours du fichier et ajout des transactions au dictionnaire
-        for row in readerTransaction:
-
-            #Séparer les chaînes de caractères pour avoir accès aux différentes cases du csv
-            newRow = row[0].split(';')
-
-            #Création objet Transaction
-            t = Transaction(str(newRow[0]), str(newRow[1]), int(newRow[2]), int(newRow[3]))
-
-            #Ajout de la transaction au dictionnaire
-            dict_transac[len(dict_transac)] = t
-
-        #Tri des transactions pour l'affichage
-        affiche += triTransactions(dict_transac)
-
-        return affiche
-
-
-#Importation d'un csv contenant des personnes et leur solde : 
-#appel dans un autre terminal avec : curl -X POST http://127.0.0.1:5000/filePath
-@app.route("/<filePath>", methods=['POST']) 
-def add_personnes_file(filePath=None):                                                                
-
-    if request.method == 'POST':    
-        affiche = "Ajout des personnes suivantes dans le registre : \n"                                             
-        filePath = str(filePath)
-        filePath = to_raw(filePath)
-
-        #Lecture du fichier csv
-        personnesFile = open(filePath)
-        readerPersonnes = csv.reader(personnesFile)
-
-        #Parcours du fichier et ajout des transactions au dictionnaire
-        for row in readerPersonnes:
-
-            #Séparer les chaînes de caractères pour avoir accès aux différentes cases du csv
-            newRow = row[0].split(';')
-
-            #Création objet Transaction
-            p = Personne(str(newRow[0]), int(newRow[1]))
-
-            #Ajout de la transaction au dictionnaire
-            dict_personne[len(dict_personne)] = p
-
-            #Pour afficher les nouvelles personnes du registre
-            affiche += p.printPersonne()
-
-        return affiche
+            return jsonify("Impeccable")
         
 
-
-
-#Affichage de toutes les transactions dans l'ordre chronologique : 
-#appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000
-@app.route("/", methods=['GET']) 
-def affichage_transactions(): 
-
-    if request.method == 'GET' :
-
-        return triTransactions(dict_transac)
-        
-
-
-#Afficher le solde et les transactions d'une personne dans l'ordre chronologique :
-#appel dans un autre terminal avec : curl -X GET http://127.0.0.1:5000/nom
-@app.route("/<nom>", methods=['GET']) 
-def personne_transactions(nom=None):  
-
-    if request.method == "GET" :
-        nom = str(nom)
-        transactions = {}
-        nb_transactions = 0
-        personne_trouvee = False
-        affich = ""
-
-        #Parcours du dictionnaire de personnes pour afficher le solde de la personne
-        for i in dict_personne :
-            if dict_personne[i].getNom() == nom :
-                affich += dict_personne[i].printPersonne()
-                personne_trouvee = True
-        
-        if personne_trouvee == False :
-            return "Personne non trouvée dans le système"
-
-        #On cherche les transactions dans lesquelles la personne est impliquée
-        for i in dict_transac:
-            if (nom == dict_transac[i].getP1() or nom == dict_transac[i].getP2()):
-                transactions[len(transactions)] = dict_transac[i]
-                nb_transactions += 1
-
-        if nb_transactions == 0 :
-            return "Pas de transactions pour cette personne"
-        
-        
-
-
-        affich += triTransactions(transactions)
-        #Affichage des transactions triées
-        return affich
-
-
-#Suppression d'une personne : 
-#Appel dans un aurtre terminal avec : curl -X DELETE http://127.0.0.1:5000/nom"
-@app.route("/<nom>", methods=['DELETE']) 
-def delete_personne(nom=None):
-
-    if request.method == 'DELETE':
-        affich = ""
-        personne_trouvee = False
-        
-        for key, item in dict_personne.items():
-            if item.getNom() == nom :
-                #Suppression de la personne
-                dict_personne.pop(key)
-                personne_trouvee = True
-                break
-        
-        if personne_trouvee == True :
-            for item in dict_personne:
-                    affich += dict_personne[item].printPersonne()
-
-        else :
-            return "Personne non trouvée dans le système"
-
-        
-
-        return affich
-    
-
-
-#Création d'une transaction : 
-#appel dans un aurtre terminal avec : curl -X POST http://127.0.0.1:5000/nom1/nom2/montant"
-@app.route("/<nom1>/<nom2>/<montant>", methods=['POST']) 
-def ajout_transation(nom1=None,nom2=None,temps=None,montant=None):
-
+#Retourne l'username de l'utilisateur actuel
+@app.route('/', methods=['POST']) 
+def get_actual_user(): 
+                                                                
     if request.method == 'POST':
 
-        #Récupération des données de la commande 
-        temps = datetime.datetime.now().timestamp()
-        montant=int(montant)
-        nom1 = str(nom1)
-        nom2 = str(nom2)
-        affich = ""
+        #Récupération de l'utilisateur
+        actual_user = str(actual_user_db.get("actual"))
 
-        #On regarde si nos personnes sont dans la base de données
-        test = 0
-        Per1 = 0
-        Per2 = 0
+        return jsonify(actual_user)
+    
 
-        for personne in dict_personne :
-            if(dict_personne[personne].getNom() == nom1):
-                test = test + 1
-                Per1 = personne
-                
-            if(dict_personne[personne].getNom() == nom2):
-                test = test + 1
-                Per2 = personne
-
-        #Si non => ERREUR    
-        if test != 2 :
-            affich = "Echec Transac" + "\n"
-
-            return affich
-
-        #Si oui on procede à la transaction   
-        else :
-            t1=Transaction(nom1,nom2,temps,montant)
-            
-            #Modification des soldes
-            dict_personne[Per1].setSoldeMoins(montant)
-            dict_personne[Per2].setSoldePlus(montant)
-
-            dict_transac[len(dict_transac)]=t1
-            affich = str(dict_transac[len(dict_transac)-1].printTransac())
-
-            return affich
-
-"""
-
+#Construction de l'app
+if __name__ == '__main__':
+    if(len(sys.argv)>1):
+        if sys.argv[1] == "check_syntax":
+            print("Build [ OK ]")
+            exit(0)
+        else:
+            print("YA UN PROBLEME")
+            exit(1)
+    app.run(debug=True)
+    
 
