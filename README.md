@@ -93,6 +93,11 @@ npm run serve
 
 La page web sera donc disponible à l'adresse [localhost:8080](http://localhost:8080/).
 
+### Statuts des CIs
+
+CI Pull Request : 
+![Generic badge](https://github.com/HakimCodage/4A_ILC_Dandana/actions/workflows/Pull_Request.yml/badge.svg)
+
 
 
 
