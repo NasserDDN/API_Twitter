@@ -26,4 +26,4 @@ jobs:
       - name: build app
         run: |
           pip3 install flask
-          python API.py check_syntax
+          python backend/API.py check_syntax
