@@ -31,25 +31,27 @@ Ce couple API/Frontend répond aux fonctionnalités suivantes :
 * Créer un compte utilisateur
 * Se connecter avec un compte utilisateur
 
-La façon dont l'API et le frontend gère et exploite ces fonctionnalités sera détaillée dans le README qui leur est consacré.
+La façon dont l'API et le frontend gère et exploite ces fonctionnalités sera détaillée dans les README qui leur sont consacrés.
 
 ## Procédure pour utiliser ce SaaS
 
 ### Avec des conteneurs
 
-Je n'ai pas réussi à mettre le frontend dans un conteneurs. Cependant, le backend peut être mis dans un conteneur grâce au `docker-compose` à la racine du projet. Vous pouvez build ce fichier à l'aide de la commande : 
+Il y a 2 Dockerfile dans ce projet : 1 pour le backend et 1 pour le frontend.
 
-`docker-compose up -d --build`
+J'ai utilisé un `docker-compose` pour exécuter ces Dockerfiles ensemble. Pour build celui-ci, exécutez la commande suivante dans un terminal en vous plaçant à la racine du projet:
 
-et run le docker-compose avec la commande :
+```
+docker-compose up -d --build
+```
+
+Ensuite, vous pouvez run le docker-compose avec la commande :
 
 `docker-compose up`
 
-Ce `docker-compose` exécute le Dockerfile du backend et run un conteneur Redis.
+Ce `docker-compose` exécute les Dockerfiles du backend et du frontend et crée un conteneur Redis.
 
-Le Dockerfile du frontend est aussi présent dans le dossier `frontend` mais n'est pas fonctionnel. Vous pouvez essayer d'exécuter le Dockerfile du frontend de votre côté. Il vous faut installer nginx et ensuite suivre ce [tutoriel](https://medium.com/bb-tutorials-and-thoughts/how-to-serve-vue-js-application-with-nginx-and-docker-d8a872a02ea8) (c'est celui que j'ai suivi).
-
-Il vous faudra donc cloner ce dépôt sur votre machine pour pouvoir l'utiliser en local.
+Vous pourrez accéder à la page du frontend à l'adresse [localhost:8000](http://127.0.0.1:8000/)
 
 ### Sans conteneurs
 
@@ -60,12 +62,6 @@ Il faut d'abord build et lancer un conteneur Redis à l'aide de la commande suiv
 ```
 docker run -d -p 6379:6379 --name myredis --network redisnet redis
 ```
-
-Vous pourrez utiliser 
-```
-docker restart myredis
-```
-si vous décidez de redémarrer le conteneur dans le futur.
 
 Les dépendances liées au backend sont listées dans le fichier `requirements.txt` dans le dossier backend. Pour installer toutes ces dépendances, entrez la commande suivante dans un terminal en vous plaçant dans le dossier `backend` :
 
@@ -83,15 +79,17 @@ set (ou export suivant le type de terminal) FLASK_APP=chemin/du/fichier/API.py
 flask run
 ```
 
-Pour pouvoir accéder aux pages web du frontend, il faut d'abord installer [Node](https://nodejs.org/en).
-
-Ensuite, exécutez la commande suivante dans un terminal en vous plaçant dans le dossier `frontend` :
+Pour pouvoir accéder aux pages web du frontend, exécutez les commandes suivantes dans un terminal Powershell en vous plaçant dans le dossier `frontend` :
 
 ```
-npm run serve
+npm install
 ```
 
-La page web sera donc disponible à l'adresse [localhost:8080](http://localhost:8080/).
+```
+npm run build
+```
+
+Cette fois-ci, la page web sera disponible à l'adresse [localhost:8080](http://localhost:8080/).
 
 ### Statuts des CIs
 
