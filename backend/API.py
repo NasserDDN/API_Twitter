@@ -8,19 +8,19 @@ from flask_cors import CORS
 import bcrypt #Pour encrypter les mots de passes
 
 #Base pour stocker les tweets
-tweets_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
+tweets_db = redis.Redis(host='service_redis', port=6379, charset="utf-8", decode_responses=True, db=0)
 
 #Base contenant les tweets de chaque utilisateur (retweets inclus)
-users_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=1)
+users_db = redis.Redis(host='service_redis', port=6379, charset="utf-8", decode_responses=True, db=1)
 
 #Base contenant la liste des sujets
-hashtag_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=2)
+hashtag_db = redis.Redis(host='service_redis', port=6379, charset="utf-8", decode_responses=True, db=2)
 
 #Base contenant la liste des comptes et leur mot de passe encrypté
-account_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=3)
+account_db = redis.Redis(host='service_redis', port=6379, charset="utf-8", decode_responses=True, db=3)
 
 #Base pour stocker l'utilisateur actuel
-actual_user_db = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=4)
+actual_user_db = redis.Redis(host='service_redis', port=6379, charset="utf-8", decode_responses=True, db=4)
 
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
@@ -212,7 +212,7 @@ def afficher_tweets():
         dict["tweets"] = list_tweets
         dict["sujets"] = list_sujets
 
-        return jsonify("ALLez")
+        
         return jsonify(dict)
     
 def convertTimestamp(item, difference):
@@ -474,8 +474,11 @@ def get_actual_user():
                                                                 
     if request.method == 'POST':
 
-        #Récupération de l'utilisateur
-        actual_user = str(actual_user_db.get("actual"))
+        if(actual_user_db.exists("actual") == 1):
+            #Récupération de l'utilisateur
+            actual_user = str(actual_user_db.get("actual"))
+        else:
+            actual_user = "invité"
 
         return jsonify(actual_user)
     

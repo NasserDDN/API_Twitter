@@ -1,15 +1,15 @@
-FROM node:10-alpine as builder
-WORKDIR /frontend
-COPY package*.json ./
+#Build le projet Vue
+FROM node:12.18.1-alpine AS build
+WORKDIR /app
+COPY package.json ./
 RUN npm install
 RUN npm i axios
 RUN npm i vue-axios
 COPY . .
-RUN npm run serve
+RUN npm run build
 
-FROM nginx:alpine as production-build
-COPY /nginx.conf /etc/nginx/nginx.conf
-RUN rm -rf /usr/share/nginx/html/*
-COPY --from=builder /vue-ui/dist /usr/share/nginx/html
+#Créer le serveur Nginx
+FROM nginx:1.19.0-alpine AS prod-stage
+COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
-CMD [ "nginx", "-g", "daemon off;" ]
+CMD ["nginx", "-g", "daemon off;"]

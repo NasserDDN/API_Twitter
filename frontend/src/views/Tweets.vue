@@ -19,7 +19,9 @@ export default {
       listHashtags: ["Pas de sujets"],
 
       //Utilisateur actuellement connecté
-      user: String,
+      user: {
+        default: "invité"
+      },
       error_message: ""
       
     }
@@ -67,7 +69,7 @@ export default {
       .then((res) => {
       console.log(res);
       var data = res.data;
-  
+      
       //Récupération de l'username
       this.user = data.toString();
 
