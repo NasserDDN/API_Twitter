@@ -37,7 +37,7 @@ Axios est un client HTTP basé sur des promesses permettant de faire des requêt
 
 
 
-### Router (version 4 adapté à la version 3 de VueJS)
+### Router (version 4: adaptée à la version 3 de VueJS)
 
 Router est un projet open source qui fait partie de lécosystème de VueJS. Router permet de pouvoir facilement naviguer entre les pages de notre application (lors d'un événement par exemple). 
 
