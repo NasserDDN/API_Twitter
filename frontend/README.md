@@ -12,6 +12,7 @@ Une page classique est composé de 3 balises :
 Une des forces de `VueJS` est que les pages sont dynamiques : si une modification est faite, la page se mettra à jour automatiquement => pas besoin de recharger la page à chaque fois comme en `HTML/CSS`.
 
 
+
 ## Composition du frontend
 
 Il est composé du fichier `App.vue`qui est la page affichée lorsque l'on va à l'adresse [localhost:8000](http://127.0.0.1:8000/) ou [localhost:8080](http://127.0.0.1:8080/) (si vous n'avez pas utilisé les conteneurs).
@@ -28,9 +29,12 @@ Il y a un fichier `Tweet.vue` dans le dossier `components`. On peut définir ce 
 
 Il y a un fichier `main.js` à la racine du dossier frontend. Ce fichier sert à créer l'App VueJs et à importer des modules ou librairies. Dans ce fichier, on voit que l'application utilise 2 librairies: `axios` et `router`.
 
+
+
 ### Axios
 
 Axios est un client HTTP basé sur des promesses permettant de faire des requêtes à notre API Flask. Grâce à ce client, nous pouvons faire des requêtes et y inclure des paramètres. Les données passées en paramètres sont automatiquement converties en objet JSON: c'est très pratique pour pouvoir envoyer tout type de données à notre API.
+
 
 
 ### Router (version 4 adapté à la version 3 de VueJS)
