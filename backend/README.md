@@ -38,7 +38,7 @@ Pour le backend, j'ai utilisé Python et Flask.
 ## Les routes
 &nbsp;
 
-L'API est composée de 5 routes différentes.
+L'API est composée de 5 routes différentes. Les données reçues en paramètre de la requête et les données retournées par les fonctions sont des objets JSON.
 
 **POST** `/postTweet`
 
@@ -157,6 +157,8 @@ Si requête d'inscription :
     ```
     '{"username": username, "password": password, "requestType": "signup" }'
     ```
+    
+    Les mots de passe sont encryptés grâce à la librairie `bcrypt` de python.
     
     Return : 
     * `"Impeccable"` si l'inscription s'est bien déroulé
