@@ -7,6 +7,8 @@ import redis
 from flask_cors import CORS
 import bcrypt #Pour encrypter les mots de passes
 from script import *
+from pathlib import Path
+sys.path.append(str(Path(__file__).parents[1].resolve()))
 
 
 #Base pour stocker les tweets
