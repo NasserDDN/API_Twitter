@@ -1,5 +1,5 @@
 #Build le projet Vue
-FROM node:12.18.1-alpine AS build
+FROM node:18.15.0-alpine AS build
 WORKDIR /app
 COPY package.json ./
 RUN npm install

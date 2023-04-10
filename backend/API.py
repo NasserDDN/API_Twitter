@@ -140,7 +140,7 @@ def tweeter():
         
        
         
-#Récupérer les tweets et les sujets
+#Récupérer et retourne les tweets et les sujets
 @app.route("/", methods=['GET']) 
 def afficher_tweets():   
     if request.method == 'GET': 

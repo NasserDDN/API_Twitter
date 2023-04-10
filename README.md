@@ -52,6 +52,10 @@ J'ai utilisé un `docker-compose` pour exécuter ces Dockerfiles ensemble. Pour 
 docker-compose up -d --build
 ```
 
+Parfois, lors de l'exécution du docker-compose, il y a une erreur : "All browser targets in the browserslist configuration have supported ES module. Therefore we don't build two separate bundles for differential loading.".
+
+J'ai essayé de la comprendre mais sans succès. Je pense l'avoir résolu en modifiant la version de node dans le Dockerfile du frontend.
+
 Ensuite, vous pouvez run le docker-compose avec la commande :
 
 `docker-compose up`
