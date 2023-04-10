@@ -9,7 +9,7 @@ L'objectif de ce projet est de recréer Twitter (de manière très simplifiée).
 CI Pull Request : 
 ![Generic badge](https://github.com/HakimCodage/4A_ILC_Dandana/actions/workflows/Pull_Request.yml/badge.svg)
 
-Depuis que j'ai ajouté le script au projet, l'exécution échoue. l'erreur est la suivante : "redis.exceptions.ConnectionError: Error -3 connecting to service_redis:6379. Temporary failure in name resolution.".
+Depuis que j'ai ajouté le script au projet, l'exécution échoue. l'erreur est la suivante : `"redis.exceptions.ConnectionError: Error -3 connecting to service_redis:6379. Temporary failure in name resolution."`.
 
 ## Composition du projet
 
