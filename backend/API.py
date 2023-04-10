@@ -6,6 +6,8 @@ import datetime #Pour les timestamp
 import redis
 from flask_cors import CORS
 import bcrypt #Pour encrypter les mots de passes
+from script import *
+
 
 #Base pour stocker les tweets
 tweets_db = redis.Redis(host='service_redis', port=6379, charset="utf-8", decode_responses=True, db=0)
@@ -22,9 +24,16 @@ account_db = redis.Redis(host='service_redis', port=6379, charset="utf-8", decod
 #Base pour stocker l'utilisateur actuel
 actual_user_db = redis.Redis(host='service_redis', port=6379, charset="utf-8", decode_responses=True, db=4)
 
+
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
 app.config['CORS_HEADERS'] = 'Content-Type'
+
+#Vider les bases redis
+tweets_db.flushall()
+
+#Données par défaut dans la base redis
+load_content()
 
 
 #Enregistrer un tweet
@@ -319,10 +328,7 @@ def afficher_tweets_personne(object=None):
             return jsonify("ERROR")
 
 
-        
-
-
-#Retweeter
+#Inscription, Connexion, Retweet
 @app.route("/inscription", methods=['PUT']) 
 def retweet():                                                                
 

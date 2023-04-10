@@ -83,6 +83,25 @@ Il y a 2 manières de naviguer entre les pages :
   ```
   
   Je ne vais pas expliquer le code en détail : il est documenté et un fichier VueJS est facile à comprendre si on connaît les langages HTML, CSS et Javascript
+
+
+## Choses à savoir
+
+* Un utilisateur non connecté ne peut pas tweeter ni retweeter
+
+
+* On peut accéder à la page de n'importe quel utilisateur en cliquant sur son pseudo ou sa photo de profil
+
+
+* Chaque utilisateur peut retweet n'importe quel tweet (même le sien) qu'une seule fois
+
+  => Si il clique sur le bouton retweet sur un tweet qu'il a déjà retweeté alors cela annule ce retweet
+
+
+* Des messages d'erreur peuvent apparaître pour informer l'utilisateur :
+  * Si l'utilisateur se trompe sur son pseudo ou son mot de passe
+  * Si lors de la création d'un compte, si le pseudo est déjà pris ou si les 2 mots de passe (pour éviter les fautes de frappe) ne sont pas identiques
+  * Si un utilisateur non connecté essaye de publier un tweet
   
 
   

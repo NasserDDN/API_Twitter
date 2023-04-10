@@ -78,19 +78,6 @@ export default {
 
     },
 
-
-
-      
-
-      /*
-      { transformRequest: [(data, headers) => {
-          delete headers.common['X-Requested-With'];
-          return data 
-        }] })
-      */
-    
-    
-
     //Requête pour récupérer la liste des tweets
     //Ainsi que la list des sujets
     AffichTweets () {

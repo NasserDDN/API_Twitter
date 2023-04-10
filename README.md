@@ -4,6 +4,11 @@ DANDANA Nasser
 
 L'objectif de ce projet est de recréer Twitter (de manière très simplifiée).
 
+### Statuts des CIs
+
+CI Pull Request : 
+![Generic badge](https://github.com/HakimCodage/4A_ILC_Dandana/actions/workflows/Pull_Request.yml/badge.svg)
+
 ## Composition du projet
 
 Le projet est composé: 
@@ -37,6 +42,8 @@ La façon dont l'API et le frontend gère et exploite ces fonctionnalités sera 
 
 ### Avec des conteneurs
 
+Commencez par démarrer votre logiciel Docker Desktop.
+
 Il y a 2 Dockerfile dans ce projet : 1 pour le backend et 1 pour le frontend.
 
 J'ai utilisé un `docker-compose` pour exécuter ces Dockerfiles ensemble. Pour build celui-ci, exécutez la commande suivante dans un terminal en vous plaçant à la racine du projet:
@@ -53,15 +60,19 @@ Ce `docker-compose` exécute les Dockerfiles du backend et du frontend et crée 
 
 Vous pourrez accéder à la page du frontend à l'adresse [localhost:8000](http://127.0.0.1:8000/)
 
-### Sans conteneurs
+### Sans conteneurs (pas conseillé car procédure plus longue et moins pratique)
 
-#### Installer les dépendances
+(J'ai conservé cette partie dans le README mais elle est devenue inutile puisque j'ai réussi la conteneurisation)
 
-Il faut d'abord build et lancer un conteneur Redis à l'aide de la commande suivante :
+D'abord, il faut modifier légèrement le fichier API.py : au début du fichier lorsque les bases redis sont créés, il faut pour chaque déclaration, modifier le paramètre `host` et lui attribuer la valeur `'localhost'` à la place de `'service_redis'`. (Il faudra évidemment faire la modification dans l'autre sens si vous voulez utiliser les conteneurs par la suite)
+
+Il faut aussi lancer un conteneur Redis à l'aide de la commande suivante :
 
 ```
 docker run -d -p 6379:6379 --name myredis --network redisnet redis
 ```
+
+#### Installer les dépendances
 
 Les dépendances liées au backend sont listées dans le fichier `requirements.txt` dans le dossier backend. Pour installer toutes ces dépendances, entrez la commande suivante dans un terminal en vous plaçant dans le dossier `backend` :
 
@@ -91,10 +102,15 @@ npm run build
 
 Cette fois-ci, la page web sera disponible à l'adresse [localhost:8080](http://localhost:8080/).
 
-### Statuts des CIs
+### Données par défaut
 
-CI Pull Request : 
-![Generic badge](https://github.com/HakimCodage/4A_ILC_Dandana/actions/workflows/Pull_Request.yml/badge.svg)
+Des données sont générées par défaut dans la base `Redis`. Si vous voulez éviter cette génération, vous pouvez supprimer la ligne 36 du fichier `API.py`: `load_content()`.
+
+Si vous ne voulez pas que les données se suppriment à chaque redémarrage des conteneurs, il faut supprimer la ligne 33 du fichier `API.py` : `tweets_db.flushall()`.
+
+Les 2 utilisateurs créés par défaut possèdent un mot de passe identique à leur pseudo. 
+
+
 
 
 
