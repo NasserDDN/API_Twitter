@@ -40,7 +40,7 @@ Pour le backend, j'ai utilisé Python et Flask.
 
 L'API est composée de 5 routes différentes. Les données reçues en paramètre de la requête et les données retournées par les fonctions sont des objets JSON.
 
-**POST** `/postTweet`
+#### POST `/postTweet`
 
 Enregistre un tweet dans la base Redis.
 
@@ -58,7 +58,7 @@ Return : Le dictionnaire passé en paramètre de la requête.
 &nbsp;
    
    
-**GET** `/`
+#### GET `/`
 
 Retourne les tweets et les sujets enregistrés dans la base Redis.
 
@@ -79,7 +79,7 @@ Et ces 2 listes sont insérées dans un dictionnaire qui est retourné à la fin
 &nbsp;
 
 
-**PUT** `/`
+#### PUT `/`
 
 Retourne tous les tweets liés à un utilisateur ou à un sujet.
 
@@ -109,7 +109,7 @@ Paramètre nécessaire :
   
   
 
-**PUT** `/inscription`
+#### PUT `/inscription`
 
 Enregistre un compte dans la base, accepte/refuse une connexion ou enregistre un retweet suivant le paramètre qui est fourni avec la requête.
 
@@ -166,7 +166,7 @@ Si requête d'inscription :
 
 
 
-**POST** `/`
+#### POST `/`
 
 Retourne le pseudo de l'utilisateur actuel.
 
